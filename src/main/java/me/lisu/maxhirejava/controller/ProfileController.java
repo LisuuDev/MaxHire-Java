@@ -26,15 +26,29 @@ public class ProfileController {
     public record EditProfileRequest(String email, String phone) {}
     public record ProfileResponse(List<UserInfo> message) {}
 
-    @PatchMapping("/edit/user")
+    @PatchMapping({"/edit/user/{id}", "/admin/update/user/{id}"})
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> editProfile(@RequestBody EditProfileRequest request, Authentication authentication) {
+    public ResponseEntity<?> editProfile(@RequestBody EditProfileRequest request, Authentication authentication, @PathVariable("id") String id) {
         String userId = authentication.getName();
+        boolean isAdmin = userRepository.isAdmin(userId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (!isAdmin && !userId.equals(id)) {
+            return ResponseEntity.status(403).body(new MessageResponse("Brak odpowiednich uprawnień"));
+        }
 
-        if (request.email() != null) user.setEmail(request.email());
+        User user = userRepository.findById(id).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(404).body(new MessageResponse("Nie znaleziono użytkownika"));
+        }
+
+        if (request.email() != null && !request.email().equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.findByEmail(request.email()).isPresent()) {
+                return ResponseEntity.status(400).body(new MessageResponse("Ten adres email jest już zajęty"));
+            }
+            user.setEmail(request.email());
+        }
+
         if (request.phone() != null) user.setPhone(request.phone());
 
         userRepository.save(user);
@@ -45,8 +59,11 @@ public class ProfileController {
     @GetMapping("/profile/getProfile/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getProfile(@PathVariable("id") String profileId) {
-        User user = userRepository.findById(profileId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(profileId).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(404).body(new MessageResponse("Nie znaleziono użytkownika"));
+        }
 
         UserInfo userInfo = new UserInfo(user);
 
