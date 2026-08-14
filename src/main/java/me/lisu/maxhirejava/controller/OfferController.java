@@ -1,5 +1,6 @@
 package me.lisu.maxhirejava.controller;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import me.lisu.maxhirejava.model.Offer;
 import me.lisu.maxhirejava.record.OfferInfo;
@@ -19,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -95,4 +97,27 @@ public class OfferController {
 
         return ResponseEntity.ok(new OfferByUserResponse(response));
     }
+
+    @PostMapping("/addOffer")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> addOffer(Authentication authentication, @Valid @RequestBody OfferRequest request) {
+        Offer offer = new Offer();
+        offer.setUserId(authentication.getName());
+        offer.setUpdated(String.valueOf(Instant.now().toEpochMilli()));
+        offer.setTitle(request.title());
+        offer.setCompany(request.company());
+        offer.setDescription(request.description());
+        offer.setTech(request.tech());
+        offer.setLinks(request.links());
+
+        Offer savedOffer;
+        try {
+            savedOffer = offerRepository.save(offer);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Wystąpił błąd podczas zapisywania oferty");
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body("Oferta została dodana pomyślnie z id: " + savedOffer.getId());
+    }
+
 }

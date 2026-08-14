@@ -79,7 +79,7 @@ public class AuthController {
         } catch (Exception e) {
             System.err.println("User creation error: " + e.getMessage());
 
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Wystąpił błąd podczas zapisywania użytkownika.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Wystąpił błąd podczas zapisywania użytkownika");
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body("Dodano użytkownika o numerze id: " + savedUser.getId());
