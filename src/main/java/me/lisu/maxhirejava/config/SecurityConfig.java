@@ -1,4 +1,4 @@
-package me.lisu.maxhirejava;
+package me.lisu.maxhirejava.config;
 
 import me.lisu.maxhirejava.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
