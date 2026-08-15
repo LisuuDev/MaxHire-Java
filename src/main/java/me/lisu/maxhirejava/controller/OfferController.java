@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -104,7 +105,7 @@ public class OfferController {
     public ResponseEntity<?> addOffer(Authentication authentication, @Valid @RequestBody OfferRequest request) {
         Offer offer = new Offer();
         offer.setUserId(authentication.getName());
-        offer.setUpdated(String.valueOf(Instant.now().toEpochMilli()));
+        offer.setUpdated(String.valueOf(Instant.now().getEpochSecond()));
         offer.setTitle(request.title());
         offer.setCompany(request.company());
         offer.setDescription(request.description());
@@ -121,4 +122,39 @@ public class OfferController {
         return ResponseEntity.status(HttpStatus.CREATED).body("Oferta została dodana pomyślnie z id: " + savedOffer.getId());
     }
 
+    @PatchMapping("/offers/editOffer/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> editOffer(Authentication authentication, @PathVariable("id") String id, @Valid @RequestBody OfferRequest request) {
+        Optional<Offer> offer = offerRepository.findById(id);
+
+        if (offer.isEmpty()) {
+            return ResponseEntity.status(404).body(new MessageResponse("Nie znaleziono oferty"));
+        }
+
+        String userId = authentication.getName();
+        boolean isAdmin = userRepository.isAdmin(userId);
+        
+        if (!Objects.equals(authentication.getName(), offer.get().getUserId()) && !isAdmin) {
+            return ResponseEntity.status(403).body(new MessageResponse("Brak uprawnień do edycji tej oferty"));
+        }
+
+        Offer existingOffer = offer.get();
+
+        existingOffer.setTitle(request.title());
+        existingOffer.setCompany(request.company());
+        existingOffer.setDescription(request.description());
+        existingOffer.setTech(request.tech());
+        existingOffer.setLinks(request.links());
+        existingOffer.setUpdated(String.valueOf(Instant.now().getEpochSecond()));
+
+        Offer savedOffer;
+        try {
+            savedOffer = offerRepository.save(existingOffer);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("Wystąpił błąd podczas zapisywania oferty"));
+        }
+
+        return ResponseEntity.ok(new MessageResponse("Oferta została zaktualizowana pomyślnie" + savedOffer.getId()));
+    }
 }
