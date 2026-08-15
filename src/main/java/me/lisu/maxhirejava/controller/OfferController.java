@@ -44,8 +44,9 @@ public class OfferController {
 
     @GetMapping("/offers")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<OfferResponse> getAllOffers(@RequestParam(defaultValue = "0") int page) {
-        Pageable pageable = PageRequest.of(page, 7, Sort.by(Sort.Direction.DESC, "updated"));
+    public ResponseEntity<OfferResponse> getAllOffers(@RequestParam(defaultValue = "1") int page) {
+        if (page < 1) page = 1;
+        Pageable pageable = PageRequest.of(page - 1, 7, Sort.by(Sort.Direction.DESC, "updated"));
 
         Page<Offer> offerPage = offerRepository.findAll(pageable);
 
@@ -56,7 +57,7 @@ public class OfferController {
                 })
                 .toList();
 
-        return ResponseEntity.ok(new OfferResponse(response, offerPage.getTotalPages() - 1));
+        return ResponseEntity.ok(new OfferResponse(response, offerPage.getTotalPages()));
     }
 
     @GetMapping("/offer/getOffer/{id}")
