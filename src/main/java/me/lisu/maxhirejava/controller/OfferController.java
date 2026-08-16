@@ -122,7 +122,7 @@ public class OfferController {
         return ResponseEntity.status(HttpStatus.CREATED).body("Oferta została dodana pomyślnie z id: " + savedOffer.getId());
     }
 
-    @PatchMapping("/offers/editOffer/{id}")
+    @PatchMapping({"/offers/editOffer/{id}", "/admin/update/offer/{id}"})
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> editOffer(Authentication authentication, @PathVariable("id") String id, @Valid @RequestBody OfferRequest request) {
         Optional<Offer> offer = offerRepository.findById(id);
@@ -156,5 +156,31 @@ public class OfferController {
         }
 
         return ResponseEntity.ok(new MessageResponse("Oferta została zaktualizowana pomyślnie" + savedOffer.getId()));
+    }
+
+    @DeleteMapping({"/offers/deleteOffer/{id}", "/admin/remove/offer/{id}"})
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> deleteOffer(Authentication authentication, @PathVariable("id") String id) {
+        Optional<Offer> offer = offerRepository.findById(id);
+
+        if (offer.isEmpty()) {
+            return ResponseEntity.status(404).body(new MessageResponse("Nie znaleziono oferty"));
+        }
+
+        String userId = authentication.getName();
+        boolean isAdmin = userRepository.isAdmin(userId);
+
+        if (!Objects.equals(authentication.getName(), offer.get().getUserId()) && !isAdmin) {
+            return ResponseEntity.status(403).body(new MessageResponse("Brak uprawnień do usunięcia tej oferty"));
+        }
+
+        try {
+            offerRepository.deleteById(id);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("Wystąpił błąd podczas usuwania oferty"));
+        }
+
+        return ResponseEntity.ok(new MessageResponse("Oferta została usunięta pomyślnie" + id));
     }
 }
