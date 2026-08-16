@@ -1,6 +1,5 @@
 package me.lisu.maxhirejava.controller;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import me.lisu.maxhirejava.model.User;
@@ -13,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -120,16 +120,14 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("token_auth", "");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
+    public ResponseEntity<?> logout() {
+        SecurityContextHolder.clearContext();
 
-        response.addCookie(cookie);
+        ResponseCookie cookie = jwtService.cleanJwtCookie();
 
-        return ResponseEntity.ok(new MessageResponse("Wylogowano pomyślnie"));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new MessageResponse("Wylogowano pomyślnie"));
     }
 
     @PostMapping("/edit/user/forgetPassword")

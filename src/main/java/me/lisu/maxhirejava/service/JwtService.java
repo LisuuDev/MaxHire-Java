@@ -3,6 +3,7 @@ package me.lisu.maxhirejava.service;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -78,5 +79,15 @@ public class JwtService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public ResponseCookie cleanJwtCookie() {
+        return ResponseCookie.from("token_auth", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Strict")
+                .build();
     }
 }

@@ -1,5 +1,6 @@
 package me.lisu.maxhirejava.config;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,6 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import me.lisu.maxhirejava.service.JwtService;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -55,9 +58,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userId);
-
                 if (jwtService.isTokenValid(token)) {
+                    UserDetails userDetails = this.userDetailsService.loadUserByUsername(userId);
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -66,14 +69,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    clearAuthCookie(response);
                 }
             }
+        } catch (ExpiredJwtException e) {
+            logger.debug("Expired JWT token: " + e.getMessage());
+            clearAuthCookie(response);
         } catch (JwtException e) {
-            // TODO: Handle it
-            logger.debug("Invalid or expired JWT token: " + e.getMessage());
+            logger.debug("Invalid JWT token: " + e.getMessage());
+            clearAuthCookie(response);
         }
 
 
         filterChain.doFilter(request, response);
+    }
+
+    private void clearAuthCookie(HttpServletResponse response) {
+        SecurityContextHolder.clearContext();
+
+        ResponseCookie cookie = jwtService.cleanJwtCookie();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
