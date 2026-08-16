@@ -3,8 +3,7 @@ package me.lisu.maxhirejava.record;
 import me.lisu.maxhirejava.model.User;
 
 public record UserInfo(
-        String _id,
-        String user_id,
+        String id,
         String email,
         String name,
         String surname,
@@ -13,7 +12,6 @@ public record UserInfo(
 ) {
     public UserInfo(User entity) {
         this(
-                entity.getId(),
                 entity.getId(),
                 entity.getEmail(),
                 entity.getName(),

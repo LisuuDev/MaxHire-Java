@@ -1,10 +1,14 @@
 package me.lisu.maxhirejava.controller;
 
+import lombok.extern.slf4j.Slf4j;
+import me.lisu.maxhirejava.model.Offer;
 import me.lisu.maxhirejava.model.User;
 import me.lisu.maxhirejava.record.MessageResponse;
+import me.lisu.maxhirejava.record.OfferInfo;
 import me.lisu.maxhirejava.record.UserInfo;
 import me.lisu.maxhirejava.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/")
 @CrossOrigin(
@@ -51,9 +56,40 @@ public class ProfileController {
 
         if (request.phone() != null) user.setPhone(request.phone());
 
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("Wystąpił błąd podczas aktualizowania profilu"));
+        }
 
         return ResponseEntity.ok(new MessageResponse("Zaktualizowano profil"));
+    }
+
+    @DeleteMapping("/admin/remove/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> deleteProfile(Authentication authentication, @PathVariable("id") String id) {
+        String userId = authentication.getName();
+        boolean isAdmin = userRepository.isAdmin(userId);
+
+        if (!isAdmin) {
+            return ResponseEntity.status(403).body(new MessageResponse("Brak odpowiednich uprawnień"));
+        }
+
+        User user = userRepository.findById(id).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(404).body(new MessageResponse("Nie znaleziono użytkownika"));
+        }
+
+        try {
+            userRepository.delete(user);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("Wystąpił błąd podczas usuwania profilu"));
+        }
+
+        return ResponseEntity.ok(new MessageResponse("Usunięto profil"));
     }
 
     @GetMapping("/profile/getProfile/{id}")
@@ -70,5 +106,28 @@ public class ProfileController {
         List<UserInfo> messageArray = List.of(userInfo);
 
         return ResponseEntity.ok(new ProfileResponse(messageArray));
+    }
+
+    @GetMapping("/admin/userList")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> editProfile(Authentication authentication) {
+        String userId = authentication.getName();
+        boolean isAdmin = userRepository.isAdmin(userId);
+
+        if (!isAdmin) {
+            return ResponseEntity.status(403).body(new MessageResponse("Brak odpowiednich uprawnień"));
+        }
+
+        List<User> userList = userRepository.findAll();
+
+        if (userList.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<UserInfo> response = userList.stream()
+                .map(UserInfo::new)
+                .toList();
+
+        return ResponseEntity.ok(response);
     }
 }
